@@ -1,4 +1,5 @@
-import pathlib
+# 1st argument is the folder path to search for jpg files
+# 2nd argument is path for renamed files
 from google import genai
 from google.genai import types, errors
 import sys
@@ -8,7 +9,11 @@ import glob
 import time
 import PIL.Image
 
-sys_instruct_art= "Limit your output to 10 words."
+if len(sys.argv) < 3:
+    print("Usage: python photo_renamer.py <folder_path> <output_folder>")
+    sys.exit(1)
+
+sys_instruct_art= "Limit your output to 10 words.  No commas, no periods, no quotes, no double quotes or other punctuation"
 
 with open('e:/ai/genai_api_key.txt') as file:
     api_key = file.read().strip()
@@ -41,3 +46,17 @@ for jpg_file in jpgfiles:
         print(output)
         time.sleep(1)
 
+    confirm = input(f"Do you want to rename {jpg_file} as above? (y/n): ")
+    if confirm.lower() != 'y':
+        print("File renaming cancelled.")
+        continue
+    try:
+        newfilename = sys.argv[2] + "\\" + response.text.replace(","," ").replace("."," ")
+        print(f"Renamed {jpg_file} to: {newfilename}.jpg")
+        os.rename(jpg_file, newfilename + ".jpg")
+    except Exception as e:
+        print(f"Error renaming file: {e}")
+        sys.exit(1)
+    except errors.APIError as e:
+        print(f"Error: {e.code} - {e.message}")
+        sys.exit(1)
