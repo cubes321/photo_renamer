@@ -6,8 +6,11 @@ import sys
 import os
 from google.genai.types import Tool, GenerateContentConfig, GoogleSearch
 import glob
-import time
+import shutil
 import PIL.Image
+import piexif
+# pip install piexif
+import os
 
 if len(sys.argv) < 3:
     print("Usage: python photo_renamer.py <folder_path> <output_folder>")
@@ -26,34 +29,57 @@ def get_jpg_files(folder_path):
 def remove_lfcr(text):
     return text.replace("\n"," ").replace("\r"," ")
 
-folder_path = sys.argv[1]
-jpgfiles = get_jpg_files(folder_path)
-print("Found the following JPG files:")
-for jpg_file in jpgfiles:
-    print(jpg_file)
-    image = PIL.Image.open(jpg_file)
+def get_ai_filename(image_path):
+    image = PIL.Image.open(image_path)
 #code goes here
     response = client.models.generate_content(
         model="gemini-2.0-flash",
         config=types.GenerateContentConfig(system_instruction=sys_instruct_art),
-        contents=["Make your response good for exif description data",image]
+        contents=["Make your response good for a descriptive filename",image]
         )
     para_text = response.text.splitlines()
-    nonempty_para_text = [line for line in para_text if line.strip()]
-    for paragraph in nonempty_para_text:
-        output = remove_lfcr(paragraph)
-        output = output[:450]
-        print(output)
-        time.sleep(1)
+    output = remove_lfcr(para_text[0])
+    print(output)
+    return output
+
+def set_exif_data(image_path, description, user_comment):
+    # Open the image file
+    img = PIL.Image.open(image_path)
+    exif_dict = piexif.load(img.info['exif'])
+
+    # Set the description and user comment in the EXIF data
+    if description:
+        
+        exif_dict['0th'][piexif.ImageIFD.ImageDescription] = description.encode('utf-8')
+    if user_comment:
+        exif_dict['Exif'][piexif.ExifIFD.UserComment] = user_comment.encode('utf-8')
+
+    # Convert the EXIF data back to bytes
+    exif_bytes = piexif.dump(exif_dict)
+
+    # Save the image with the new EXIF data
+    img.save(image_path, exif=exif_bytes)
+
+folder_path = sys.argv[1]
+jpgfiles = get_jpg_files(folder_path)
+do_exif = input("Do you want to amend exif description and user comment? (y/n): ")
+print("Found the following JPG files:")
+for jpg_file in jpgfiles:
+    print(jpg_file)
+    output = get_ai_filename(jpg_file)
+
 
     confirm = input(f"Do you want to rename {jpg_file} as above? (y/n): ")
     if confirm.lower() != 'y':
         print("File renaming cancelled.")
         continue
     try:
-        newfilename = sys.argv[2] + "\\" + response.text.replace(","," ").replace("."," ")
+        newfilename = sys.argv[2] + "\\" + output.replace(","," ").replace("."," ")
         print(f"Renamed {jpg_file} to: {newfilename}.jpg")
-        os.rename(jpg_file, newfilename + ".jpg")
+        shutil.copy(jpg_file, newfilename + ".jpg")
+        if do_exif.lower () == 'y':
+            set_exif_data(f"{newfilename}.jpg", output, output)
+
     except Exception as e:
         print(f"Error renaming file: {e}")
         sys.exit(1)
