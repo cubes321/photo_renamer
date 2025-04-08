@@ -61,6 +61,9 @@ def set_exif_data(image_path, description, user_comment):
     img.save(image_path, exif=exif_bytes)
 
 folder_path = sys.argv[1]
+if sys.argv[1] == sys.argv[2]:
+    print("Input and output folders are the same.  Please change one of them.")
+    sys.exit(1)
 if os.path.exists(folder_path) == False:
     print(f"Folder {folder_path} does not exist.")
     sys.exit(1)
