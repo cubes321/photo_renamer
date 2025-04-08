@@ -61,6 +61,13 @@ def set_exif_data(image_path, description, user_comment):
     img.save(image_path, exif=exif_bytes)
 
 folder_path = sys.argv[1]
+if os.path.exists(folder_path) == False:
+    print(f"Folder {folder_path} does not exist.")
+    sys.exit(1)
+if os.path.exists(sys.argv[2]) == False:
+    print(f"Output folder {sys.argv[2]} does not exist.")
+    sys.exit(1)
+
 jpgfiles = get_jpg_files(folder_path)
 do_exif = input("Do you want to amend exif description and user comment? (y/n): ")
 print("Found the following JPG files:")
