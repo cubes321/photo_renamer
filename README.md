@@ -42,9 +42,40 @@ set PHOTO_RENAMER_MODEL=gemini-2.0-flash
 ## Usage
 
 ```
-python photo_renamer.py <input_folder> [output_folder]
+python photo_renamer.py <input_folder> [output_folder] [options]
 ```
 
-With an output folder you are asked whether to rename (copy to the new name),
-amend EXIF, or both. Without one, only EXIF data is set on the originals.
-Each suggestion is confirmed before anything is written.
+| Option | Meaning |
+|---|---|
+| `-m`, `--mode r\|a\|b` | Rename (copy to output folder), amend EXIF, or both. Asked interactively if omitted. |
+| `-y`, `--yes` | Apply every suggestion without asking. |
+| `--batch` | Get all suggestions first, then pick which to apply in one go. |
+| `--no-date` | Don't prefix new filenames with the date taken (`2024-05-01 Dog on beach.jpg`). |
+| `--model NAME` | Overrides `PHOTO_RENAMER_MODEL`. |
+| `--base-url URL` | Overrides `OPENAI_BASE_URL`. |
+
+Without an output folder, only EXIF data is set on the originals. Renamed files
+are copies; the originals are never moved. Existing files are never overwritten
+(`name (2).jpg` is used instead).
+
+The model returns a short name (used for the filename) and a longer
+description (written to EXIF `ImageDescription` and `UserComment`). The date
+prefix comes from the EXIF `DateTimeOriginal` tag and is skipped when a photo
+has none.
+
+In `--batch` mode the selection prompt accepts `all` (or Enter), `none`, a list
+like `1 3 5-7`, or a leading `-` to exclude (`-2 4` applies everything except
+2 and 4).
+
+Examples:
+
+```
+# Review every suggestion one by one
+python photo_renamer.py photos renamed
+
+# Rename and tag a whole folder unattended
+python photo_renamer.py photos renamed --mode b --yes
+
+# Review a list of suggestions at the end
+python photo_renamer.py photos renamed --mode b --batch
+```
